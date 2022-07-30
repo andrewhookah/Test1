@@ -1,8 +1,8 @@
 package org.example;
 
 import org.junit.Test;
+import org.junit.internal.TextListener;
 import org.junit.runner.JUnitCore;
-import org.junit.runner.Result;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
@@ -14,10 +14,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 
-public class Main {
+public class TestRunner {
     public static void main(String[] args) {
-        Result result = JUnitCore.runClasses(MethodInterception.class);
-        System.out.println(result.wasSuccessful());
+        JUnitCore junit = new JUnitCore();
+        junit.addListener(new TextListener(System.out));
+        junit.run(MethodInterception.class);
     }
         @Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
         @Target({METHOD, TYPE})
@@ -35,7 +36,7 @@ public class Main {
             String buttonSearch();
         }
 
-        public class MethodInterception {
+        public static class MethodInterception {
 
             @Test
             public void annotationValue() {
@@ -46,10 +47,20 @@ public class Main {
             }
 
             private MainPage createPage(Class clazz) {
-                ClassLoader classLoader = clazz.getClassLoader();
-                Class[] interfaces = clazz.getInterfaces();
-                MainPage proxy = (MainPage) Proxy.newProxyInstance(classLoader, interfaces, new Handler());
-                return proxy;
+                MainPage mainPage = new MainPage() {
+                    @Override
+                    public String textInputSearch() {
+                        return ".//*[@test-attr='input_search']";
+                    }
+
+                    @Override
+                    public String buttonSearch() {
+                        return ".//*[@test-attr='button_search']";
+                    }
+                };
+                ClassLoader classLoader = mainPage.getClass().getClassLoader();
+                Class[] interfaces = mainPage.getClass().getInterfaces();
+                return (MainPage) Proxy.newProxyInstance(classLoader, interfaces, new Handler(mainPage));
             }
         }
     }
